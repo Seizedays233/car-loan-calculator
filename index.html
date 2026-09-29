@@ -1,0 +1,386 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>全款 vs 贷款购车计算器</title>
+<style>
+  :root{
+    --bg:#f5f7fb; --card:#ffffff; --text:#172033; --muted:#687386;
+    --line:#e6eaf0; --primary:#2d6cdf; --good:#15803d; --bad:#b42318;
+    --warn:#b7791f; --soft:#eef4ff;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;color:var(--text)}
+  .wrap{max-width:1120px;margin:32px auto;padding:0 18px 60px}
+  h1{font-size:30px;margin:0 0 8px}
+  .sub{color:var(--muted);line-height:1.7;margin-bottom:24px}
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:20px;box-shadow:0 6px 22px rgba(20,35,70,.05)}
+  .card h2{font-size:18px;margin:0 0 16px}
+  .field{display:grid;grid-template-columns:1fr 180px;gap:12px;align-items:center;padding:9px 0;border-bottom:1px dashed #edf0f4}
+  .field:last-child{border-bottom:0}
+  label{font-size:14px;font-weight:650}
+  small{display:block;color:var(--muted);font-weight:400;line-height:1.45;margin-top:3px}
+  input,select{width:100%;padding:10px 11px;border:1px solid #ccd3dd;border-radius:10px;font-size:14px;background:#fff;color:var(--text)}
+  input:focus,select:focus{outline:none;border-color:var(--primary);box-shadow:0 0 0 3px rgba(45,108,223,.1)}
+  .wide{grid-column:1/-1}
+  .result-head{background:linear-gradient(135deg,#172033,#2b3f66);color:#fff;border:0}
+  .verdict{font-size:28px;font-weight:800;margin:6px 0 10px}
+  .reason{line-height:1.8;color:#e7ecf5}
+  .metrics{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:16px}
+  .metric{background:#f8fafc;border:1px solid var(--line);border-radius:14px;padding:14px}
+  .metric .k{font-size:12px;color:var(--muted);margin-bottom:6px}
+  .metric .v{font-size:20px;font-weight:800}
+  .good{color:var(--good)} .bad{color:var(--bad)} .warn{color:var(--warn)}
+  .section-title{font-size:15px;font-weight:800;margin:2px 0 10px}
+  .compare{width:100%;border-collapse:collapse;font-size:14px}
+  .compare th,.compare td{padding:12px 10px;border-bottom:1px solid var(--line);text-align:right}
+  .compare th:first-child,.compare td:first-child{text-align:left}
+  .compare th{color:var(--muted);font-weight:700}
+  details{margin-top:10px;border-top:1px solid var(--line);padding-top:12px}
+  summary{cursor:pointer;font-weight:750}
+  .tip{margin-top:16px;padding:14px 16px;background:var(--soft);border-radius:12px;line-height:1.7;font-size:14px}
+  .footer{color:var(--muted);font-size:12px;line-height:1.7;margin-top:14px}
+  .switch{display:flex;gap:8px;margin-bottom:8px}
+  .pill{font-size:12px;background:#f0f3f8;padding:7px 10px;border-radius:999px;color:#4d596a}
+  @media(max-width:800px){
+    .grid{grid-template-columns:1fr}
+    .field{grid-template-columns:1fr}
+    .metrics{grid-template-columns:1fr 1fr}
+  }
+  @media(max-width:520px){.metrics{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>🚘 全款 vs 贷款购车计算器</h1>
+  <div class="sub">
+    适合拿着 4S 店报价单直接填写。重点不是只看“宣传利率”，而是比较
+    <b>全款实际支出</b>、<b>贷款全部成本</b>，以及把现金留在手里的<b>资金价值</b>。
+  </div>
+
+  <div class="grid">
+    <div class="card">
+      <h2>① 全款方案</h2>
+      <div class="field">
+        <label>全款总落地价
+          <small>车价 + 购置税 + 保险 + 上牌等，真正一次性付出去的钱</small>
+        </label>
+        <input id="cashPrice" type="number" value="350000" step="1000">
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>② 贷款方案基础报价</h2>
+      <div class="field">
+        <label>贷款方案落地价（不含利息）
+          <small>选择分期后，车本身及税费保险等合计；先不要把贷款利息算进去</small>
+        </label>
+        <input id="loanBasePrice" type="number" value="320000" step="1000">
+      </div>
+      <div class="field">
+        <label>贷款本金
+          <small>真正向银行/奔驰金融借的钱</small>
+        </label>
+        <input id="principal" type="number" value="160000" step="1000">
+      </div>
+      <div class="field">
+        <label>贷款专属额外费用
+          <small>金融服务费、强制装潢、因贷款多出的保险等；没有就填 0</small>
+        </label>
+        <input id="extraFees" type="number" value="3000" step="100">
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>③ 分期参数</h2>
+      <div class="field">
+        <label>贷款年限</label>
+        <select id="years">
+          <option value="2">2 年</option>
+          <option value="3" selected>3 年</option>
+          <option value="4">4 年</option>
+          <option value="5">5 年</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>我知道哪种数据？</label>
+        <select id="mode">
+          <option value="rate" selected>知道年利率</option>
+          <option value="payment">只知道每月月供</option>
+        </select>
+      </div>
+      <div class="field" id="rateRow">
+        <label>宣传年利率（%）
+          <small>例如销售说“年利率 4.99%”，就填 4.99</small>
+        </label>
+        <input id="annualRate" type="number" value="4.99" step="0.01">
+      </div>
+      <div class="field" id="paymentRow" style="display:none">
+        <label>每月月供
+          <small>报价单写多少就填多少</small>
+        </label>
+        <input id="monthlyPaymentInput" type="number" value="4800" step="1">
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>④ 你的资金情况</h2>
+      <div class="field">
+        <label>你认为闲置资金长期年化收益率（%）
+          <small>不确定可先填 3% / 5% / 8%。它不是保证收益，只用来比较资金占用。</small>
+        </label>
+        <input id="investReturn" type="number" value="5" step="0.1">
+      </div>
+
+      <details>
+        <summary>可选：计划提前还款</summary>
+        <div class="field">
+          <label>提前还款月份
+            <small>0 表示不提前还；例如第 24 个月还清就填 24</small>
+          </label>
+          <input id="prepayMonth" type="number" value="0" min="0" step="1">
+        </div>
+        <div class="field">
+          <label>提前还款违约金
+            <small>直接填预计金额；没有就填 0</small>
+          </label>
+          <input id="prepayPenalty" type="number" value="0" step="100">
+        </div>
+      </details>
+    </div>
+
+    <div class="card result-head wide">
+      <div style="opacity:.8;font-size:13px">自动结论</div>
+      <div id="verdict" class="verdict">—</div>
+      <div id="reason" class="reason">填写参数后自动计算。</div>
+    </div>
+
+    <div class="card wide">
+      <div class="section-title">一眼看懂结果</div>
+      <div class="metrics">
+        <div class="metric"><div class="k">贷款总利息</div><div class="v" id="interest">—</div></div>
+        <div class="metric"><div class="k">贷款总现金支出</div><div class="v" id="loanTotal">—</div></div>
+        <div class="metric"><div class="k">不考虑投资收益，贷款比全款</div><div class="v" id="nominalDiff">—</div></div>
+        <div class="metric"><div class="k">贷款时一开始少占用的现金</div><div class="v" id="cashRetained">—</div></div>
+        <div class="metric"><div class="k">综合融资年化成本（估算）</div><div class="v" id="effectiveApr">—</div></div>
+        <div class="metric"><div class="k">盈亏平衡投资年化</div><div class="v" id="breakEven">—</div></div>
+      </div>
+
+      <div style="height:18px"></div>
+      <table class="compare">
+        <thead>
+          <tr><th>比较项目</th><th>全款</th><th>贷款</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>买车总名义现金支出</td><td id="cashNominal">—</td><td id="loanNominal">—</td></tr>
+          <tr><td>当前需要占用现金</td><td id="cashNow">—</td><td id="loanNow">—</td></tr>
+          <tr><td>按你的预期收益率折算后的资金成本</td><td id="cashPV">—</td><td id="loanPV">—</td></tr>
+          <tr><td><b>考虑资金价值后的差额</b></td><td colspan="2" id="pvDiff" style="font-weight:800">—</td></tr>
+        </tbody>
+      </table>
+
+      <div class="tip" id="tip">
+        提示：如果销售只告诉你“月供”，把上面的模式切换成“只知道每月月供”，计算器也能反推出实际融资成本。
+      </div>
+      <div class="footer">
+        说明：默认按等额本息估算。所谓“综合融资年化成本”会把你填写的贷款专属额外费用也视作融资成本，
+        因此通常会比宣传利率更接近真实负担。投资收益率只是机会成本假设，不代表未来一定能获得该收益。
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const ids = [
+  "cashPrice","loanBasePrice","principal","extraFees","years","mode","annualRate",
+  "monthlyPaymentInput","investReturn","prepayMonth","prepayPenalty"
+];
+ids.forEach(id => document.getElementById(id).addEventListener("input", calc));
+document.getElementById("mode").addEventListener("change", () => {
+  const m = document.getElementById("mode").value;
+  document.getElementById("rateRow").style.display = m === "rate" ? "" : "none";
+  document.getElementById("paymentRow").style.display = m === "payment" ? "" : "none";
+  calc();
+});
+
+function n(id){ return Number(document.getElementById(id).value || 0); }
+function money(x){
+  if(!isFinite(x)) return "—";
+  return "¥" + Math.round(x).toLocaleString("zh-CN");
+}
+function pct(x){
+  if(!isFinite(x)) return "—";
+  return (x*100).toFixed(2) + "%";
+}
+function pmt(P, rm, N){
+  if(N<=0) return 0;
+  if(Math.abs(rm) < 1e-12) return P/N;
+  return P*rm/(1-Math.pow(1+rm,-N));
+}
+function balanceAfter(P, rm, pay, k){
+  if(k<=0) return P;
+  if(Math.abs(rm) < 1e-12) return Math.max(0,P-pay*k);
+  return Math.max(0, P*Math.pow(1+rm,k) - pay*(Math.pow(1+rm,k)-1)/rm);
+}
+function solveRateFromPayment(P, pay, N){
+  if(pay <= P/N) return 0;
+  let lo=0, hi=1;
+  for(let i=0;i<100;i++){
+    let mid=(lo+hi)/2;
+    let guess=pmt(P,mid,N);
+    if(guess>pay) hi=mid; else lo=mid;
+  }
+  return (lo+hi)/2;
+}
+function irrMonthly(netProceeds, cashflows){
+  // Find r so PV(outflows)=net proceeds
+  if(netProceeds<=0) return NaN;
+  const f = (r) => {
+    let pv=0;
+    for(let i=0;i<cashflows.length;i++){
+      pv += cashflows[i]/Math.pow(1+r,i+1);
+    }
+    return pv-netProceeds;
+  };
+  let lo=-0.99, hi=2;
+  let flo=f(lo), fhi=f(hi);
+  if(flo*fhi>0) return NaN;
+  for(let i=0;i<160;i++){
+    let mid=(lo+hi)/2, fm=f(mid);
+    if(flo*fm<=0){hi=mid;fhi=fm;}else{lo=mid;flo=fm;}
+  }
+  return (lo+hi)/2;
+}
+function pvOfFlows(upfront, flows, annualReturn){
+  const rm = Math.pow(1+annualReturn,1/12)-1;
+  let pv=upfront;
+  flows.forEach((c,i)=> pv += c/Math.pow(1+rm,i+1));
+  return pv;
+}
+function breakEvenAnnual(cashPrice, upfront, flows){
+  const diff = (annual) => cashPrice - pvOfFlows(upfront,flows,annual);
+  let d0=diff(0);
+  let lo=0, hi=1.0, dhi=diff(hi);
+  if(Math.abs(d0)<1) return 0;
+  // no positive-rate crossing up to 100%
+  if(d0*dhi>0) return NaN;
+  for(let i=0;i<120;i++){
+    let mid=(lo+hi)/2, dm=diff(mid);
+    if(d0*dm<=0) hi=mid; else lo=mid;
+  }
+  return (lo+hi)/2;
+}
+
+function calc(){
+  const cashPrice=n("cashPrice");
+  const loanBase=n("loanBasePrice");
+  const P=n("principal");
+  const fees=n("extraFees");
+  const years=n("years");
+  const N=Math.max(1,Math.round(years*12));
+  const mode=document.getElementById("mode").value;
+  const inv=Math.max(-0.99,n("investReturn")/100);
+  let prepay=Math.round(n("prepayMonth"));
+  const penalty=n("prepayPenalty");
+
+  let rm, pay;
+  if(mode==="rate"){
+    rm=n("annualRate")/100/12;
+    pay=pmt(P,rm,N);
+  }else{
+    pay=n("monthlyPaymentInput");
+    rm=solveRateFromPayment(P,pay,N);
+  }
+
+  if(prepay<=0 || prepay>=N) prepay=0;
+
+  let flows=[], interest=0, totalPayments=0, usedPenalty=0;
+  if(prepay===0){
+    for(let i=0;i<N;i++) flows.push(pay);
+    totalPayments=pay*N;
+    interest=totalPayments-P;
+  }else{
+    const bal=balanceAfter(P,rm,pay,prepay);
+    for(let i=0;i<prepay;i++) flows.push(pay);
+    // At the prepay month, add remaining balance and penalty to that month's payment.
+    flows[flows.length-1] += bal + penalty;
+    const principalRepaid = P-bal;
+    interest = pay*prepay - principalRepaid;
+    totalPayments = pay*prepay + bal + penalty;
+    usedPenalty=penalty;
+  }
+
+  const upfront = Math.max(0, loanBase-P) + fees; // base price own-money portion + finance-only fees
+  const loanNominal = loanBase + interest + fees + usedPenalty;
+  const nominalDiff = loanNominal - cashPrice; // positive => loan more expensive
+  const retained = cashPrice - upfront;
+
+  const aprM=irrMonthly(P-fees, flows);
+  const aprEff=isFinite(aprM) ? Math.pow(1+aprM,12)-1 : NaN;
+
+  const loanPV=pvOfFlows(upfront,flows,inv);
+  const cashPV=cashPrice;
+  const pvSavings=cashPV-loanPV; // positive => loan wins after opportunity cost
+  const be=breakEvenAnnual(cashPrice,upfront,flows);
+
+  document.getElementById("interest").textContent=money(Math.max(0,interest));
+  document.getElementById("loanTotal").textContent=money(loanNominal);
+
+  const nd=document.getElementById("nominalDiff");
+  if(nominalDiff>0){ nd.textContent="多花 "+money(nominalDiff); nd.className="v bad"; }
+  else if(nominalDiff<0){ nd.textContent="少花 "+money(-nominalDiff); nd.className="v good"; }
+  else { nd.textContent="基本一样"; nd.className="v"; }
+
+  document.getElementById("cashRetained").textContent=money(retained);
+  document.getElementById("effectiveApr").textContent=isFinite(aprEff)?pct(aprEff):"无法估算";
+  document.getElementById("breakEven").textContent=isFinite(be)?pct(be):(pvSavings>=0?"0%以上通常偏贷款":"未找到合理交点");
+
+  document.getElementById("cashNominal").textContent=money(cashPrice);
+  document.getElementById("loanNominal").textContent=money(loanNominal);
+  document.getElementById("cashNow").textContent=money(cashPrice);
+  document.getElementById("loanNow").textContent=money(upfront);
+  document.getElementById("cashPV").textContent=money(cashPV);
+  document.getElementById("loanPV").textContent=money(loanPV);
+
+  const pd=document.getElementById("pvDiff");
+  if(pvSavings>0){ pd.textContent="按你的收益率假设，贷款约更有利 "+money(pvSavings); pd.className="good"; }
+  else if(pvSavings<0){ pd.textContent="按你的收益率假设，全款约更有利 "+money(-pvSavings); pd.className="bad"; }
+  else { pd.textContent="两种方案几乎一样"; pd.className=""; }
+
+  const threshold=Math.max(2000,cashPrice*0.005);
+  let verdict, reasons=[];
+  if(pvSavings>threshold){
+    verdict="更倾向：贷款";
+    reasons.push(`按你填写的 ${(inv*100).toFixed(1)}% 资金收益率折算，贷款方案的资金成本约低 ${money(pvSavings)}。`);
+  }else if(pvSavings<-threshold){
+    verdict="更倾向：全款";
+    reasons.push(`按你填写的 ${(inv*100).toFixed(1)}% 资金收益率折算，全款方案约更省 ${money(-pvSavings)}。`);
+  }else{
+    verdict="两种方案非常接近";
+    reasons.push(`把资金时间价值算进去后，两者差额只有约 ${money(Math.abs(pvSavings))}，不必为这点差额承担额外复杂度。`);
+  }
+
+  const priceDiscount=cashPrice-loanBase;
+  if(priceDiscount>0) reasons.push(`贷款方案本身比全款报价便宜 ${money(priceDiscount)}，这部分优惠已经计入比较。`);
+  else if(priceDiscount<0) reasons.push(`贷款方案基础落地价反而比全款高 ${money(-priceDiscount)}。`);
+
+  if(nominalDiff>0) reasons.push(`如果完全不考虑手里现金能产生收益，贷款最终会多支出约 ${money(nominalDiff)}。`);
+  else if(nominalDiff<0) reasons.push(`即使不考虑资金收益，贷款总现金支出仍少约 ${money(-nominalDiff)}。`);
+
+  if(isFinite(aprEff)) reasons.push(`把贷款专属费用也算进去后，综合融资年化成本约为 ${(aprEff*100).toFixed(2)}%。`);
+  if(isFinite(be)) reasons.push(`只要你对保留资金的长期年化收益预期高于约 ${(be*100).toFixed(2)}%，贷款的资金效率通常开始占优。`);
+
+  document.getElementById("verdict").textContent=verdict;
+  document.getElementById("reason").innerHTML=reasons.map(x=>"• "+x).join("<br>");
+
+  let tip = `当前估算月供约 <b>${money(pay)}</b>。`;
+  if(prepay>0) tip += ` 已按第 <b>${prepay}</b> 个月提前还清计算，并计入违约金 ${money(penalty)}。`;
+  tip += ` 真正买车时，把 4S 店的两张报价单数字原样填进来即可。`;
+  document.getElementById("tip").innerHTML=tip;
+}
+calc();
+</script>
+</body>
+</html>
